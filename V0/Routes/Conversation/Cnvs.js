@@ -6,10 +6,29 @@ var async = require('async');
 router.baseURL = '/Cnvs';
 
 router.get('/', function(req, res) {
-   req.cnn.chkQry(req.validator, 'select id, title from Conversation', null,
+   if(!req.query.owner){
+      req.cnn.chkQry('select * from Conversation', null,
+      function(err, cnvs) {
+         if (!err)
+            res.json(cnvs);
+         req.cnn.release();
+      });
+   }
+   else {
+      req.cnn.chkQry('select * from Conversation where ownerId = ?', req.query.owner,
+      function(err, cnvs) {
+         if (!err)
+            res.json(cnvs);
+         req.cnn.release();
+      });
+   }
+});
+
+router.get('/:id', function(req, res) {
+   req.cnn.chkQry('select * from Conversation where id = ?', req.params.id,
    function(err, cnvs) {
       if (!err)
-         res.json(cnvs);
+         res.json(cnvs[0]);
       req.cnn.release();
    });
 });
@@ -25,8 +44,10 @@ router.post('/', function(req, res) {
          cnn.chkQry('select * from Conversation where title = ?', body.title, cb);
    },
    function(existingCnv, fields, cb) {
-      if (vld.check(!existingCnv.length, Tags.dupTitle, null, cb))
+      if (vld.check(!existingCnv.length, Tags.dupTitle, null, cb)) {
+         body.ownerId = req.session.id;
          cnn.chkQry("insert into Conversation set ?", body, cb);
+      }
    },
    function(insRes, fields, cb) {
       res.location(router.baseURL + '/' + insRes.insertId).end();
@@ -45,13 +66,12 @@ router.put('/:cnvId', function(req, res) {
 
    async.waterfall([
    function(cb) {
-      cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
+      cnn.chkQry('select * from Conversation where id = ?', cnvId, cb);
    },
    function(cnvs, fields, cb) {
-      if (vld.check(cnvs.length, Tags.notFound, null, cb) &&
-       vld.checkPrsOK(result[0].prsId, cb))
-         cnn.chkQry('select * from Conversation where id <> ? && title = ?',
-          [cnvId, body.title], cb);
+      if (vld.chain (("title" in body) && body.title, Tags.missingField, ["title"]).check(cnvs.length, Tags.notFound, null, cb) &&
+       vld.checkPrsOK(cnvs[0].ownerId, cb))
+         cnn.chkQry('select * from Conversation where title = ?', body.title, cb);
    },
    function(sameTtl, fields, cb) {
       if (vld.check(!sameTtl.length, Tags.dupTitle, cb))
@@ -72,16 +92,16 @@ router.delete('/:cnvId', function(req, res) {
 
    async.waterfall([
    function(cb) {
-      cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
+      cnn.chkQry('select * from Conversation where id = ?', cnvId, cb);
    },
    function(cnvs, fields, cb) {
       if (vld.check(cnvs.length, Tags.notFound, null, cb) &&
-       vld.checkPrsOK(result[0].prsID, cb))
-         cnn.chkQry('delete from Conversation where id = ?', [cnvId], cb);
+       vld.checkPrsOK(cnvs[0].ownerId, cb))
+         cnn.chkQry('delete from Conversation where id = ?', cnvId, cb);
    }],
    function(err) {
       if (!err)
-         cnn.status(200);
+         res.status(200).end();
       cnn.release();
    });
 });
