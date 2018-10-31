@@ -21,7 +21,8 @@ router.post('/', function(req, res) {
 
    async.waterfall([
    function(cb) {
-      cnn.chkQry('select * from Conversation where title = ?', body.title, cb);
+      if(vld.check(body.title, Tags.missingField, ["title"], cb))
+         cnn.chkQry('select * from Conversation where title = ?', body.title, cb);
    },
    function(existingCnv, fields, cb) {
       if (vld.check(!existingCnv.length, Tags.dupTitle, null, cb))
