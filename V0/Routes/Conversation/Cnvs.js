@@ -27,7 +27,7 @@ router.get('/', function(req, res) {
 router.get('/:id', function(req, res) {
    req.cnn.chkQry('select * from Conversation where id = ?', req.params.id,
    function(err, cnvs) {
-      if (!err)
+      if (!err&& req.validator.check(cnvs.length, Tags.notFound, null, null))
          res.json(cnvs[0]);
       req.cnn.release();
    });
@@ -110,27 +110,47 @@ router.get('/:cnvId/Msgs', function(req, res) {
    var vld = req.validator;
    var cnvId = req.params.cnvId;
    var cnn = req.cnn;
-   var query = 'select whenMade, email, content from Conversation c' +
-    ' join Message on cnvId = c.id join Person p on prsId = p.id where c.id = ?' +
-    ' order by whenMade desc';
-   var params = [cnvId];
+   var query = 'select m.id, whenMade, email, content from Conversation c' +
+    ' join Message m on cnvId = c.id' 
+   var params = [];
+   var limit = 0;
 
    // And finally add a limit clause and parameter if indicated.
-   if (req.params.num) {
-      query += ' limit ?';
-      params.push(req.params.num);
+   
+   if (req.query.dateTime) {
+      query += ' and whenMade <= ?';
+      params.push(req.query.dateTime);
+   }
+
+   query += ' join Person p on prsId = p.id where c.id = ? order by whenMade desc';
+   params.push(cnvId);
+
+   if (req.query.num) {
+      //query += ' limit = ?;';
+      //params.push(req.query.num);
+      limit = req.query.num;
    }
 
    async.waterfall([
    function(cb) {  // Check for existence of conversation
+      console.log("\ngot here\n");
       cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
    },
    function(cnvs, fields, cb) { // Get indicated messages
-      if (vld.check(cnvs.length, Tags.notFound, null, cb))
+     // console.log("\nQUERY:\t" + query + "\n");
+     // console.log("\nPARAMS:\t" + params + "\n");
+      console.log("\nCNVS-LENGTH:\t" + cnvs.length + "\n");
+      if (vld.check(cnvs.length, Tags.notFound, null, cb)){
+         console.log("\nIF STATEMENT PASSED\n");
          cnn.chkQry(query, params, cb);
+      }
    },
    function(msgs, fields, cb) { // Return retrieved messages
-      res.json(msgs);
+      console.log("\nMSG:\t" + msgs + "\n");
+      if(limit)
+         res.json(msgs.slice(0, limit)).end();
+      else 
+         res.json(msgs).end();
    }],
    function(err){
       cnn.release();
@@ -145,20 +165,23 @@ router.post('/:cnvId/Msgs', function(req, res){
 
    async.waterfall([
    function(cb) {
-      cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
+      if(vld.check(req.body.content, Tags.missingField, "content", cb))
+         cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
    },
    function(cnvs, fields, cb) {
       if (vld.check(cnvs.length, Tags.notFound, null, cb))
-         cnn.chkQry('insert into Message set ?',
+         cnn.chkQry('Insert into Message set ?',
           {cnvId: cnvId, prsId: req.session.id,
           whenMade: now = new Date(), content: req.body.content}, cb);
    },
    function(insRes, fields, cb) {
-      res.location(router.baseURL + '/' + insRes.insertId).end();
-      cnn.chkQry("update Conversation set lastPost = ? where id = ?",
-       [now, cnvId], cb);
+      //console.log("\n" + Object.keys(insRes) + "\n" + insRes.insertId + "\n");
+      res.location(router.baseURL + '/' + insRes.insertId);
+      cnn.chkQry("update Conversation set lastMessage = ? where id = ?", [now, cnvId], cb);
    }],
    function(err) {
+      if (!err)
+         res.status(200).end();
       cnn.release();
    });
 });
