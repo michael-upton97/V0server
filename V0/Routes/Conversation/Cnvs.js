@@ -6,28 +6,29 @@ var async = require('async');
 router.baseURL = '/Cnvs';
 
 router.get('/', function(req, res) {
-   if(!req.query.owner){
-      req.cnn.chkQry('select * from Conversation', null,
-      function(err, cnvs) {
-         if (!err)
-            res.json(cnvs);
-         req.cnn.release();
-      });
+   if(req.validator.check(true, null, null, null)){
+      if(!req.query.owner){
+         req.cnn.chkQry('select * from Conversation', null,
+         function(err, cnvs) {
+            if (!err)
+               res.json(cnvs).end();
+         });
+      }
+      else {
+         req.cnn.chkQry('select * from Conversation where ownerId = ?', req.query.owner,
+         function(err, cnvs) {
+            if (!err)
+               res.json(cnvs).end();
+         });
+      }
    }
-   else {
-      req.cnn.chkQry('select * from Conversation where ownerId = ?', req.query.owner,
-      function(err, cnvs) {
-         if (!err)
-            res.json(cnvs);
-         req.cnn.release();
-      });
-   }
+   req.cnn.release();
 });
 
 router.get('/:id', function(req, res) {
    req.cnn.chkQry('select * from Conversation where id = ?', req.params.id,
    function(err, cnvs) {
-      if (!err&& req.validator.check(cnvs.length, Tags.notFound, null, null))
+      if (!err && req.validator.check(cnvs.length, Tags.notFound, null, null))
          res.json(cnvs[0]);
       req.cnn.release();
    });
@@ -133,7 +134,7 @@ router.get('/:cnvId/Msgs', function(req, res) {
 
    async.waterfall([
    function(cb) {  // Check for existence of conversation
-      console.log("\ngot here\n");
+      
       cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
    },
    function(cnvs, fields, cb) { // Get indicated messages
@@ -147,12 +148,22 @@ router.get('/:cnvId/Msgs', function(req, res) {
    },
    function(msgs, fields, cb) { // Return retrieved messages
       console.log("\nMSG:\t" + msgs + "\n");
-      if(limit)
+      if(msgs)
+         for (var x in msgs){
+            console.log(msgs[0].whenMade); 
+            msgs[x].whenMade = msgs[x].whenMade.getTime();
+         }
+      if(limit){
          res.json(msgs.slice(0, limit)).end();
-      else 
+         cb();
+      }
+      else {
          res.json(msgs).end();
+         cb();
+      }
    }],
    function(err){
+      console.log("\ngot here\n");
       cnn.release();
    });
 });
@@ -169,14 +180,15 @@ router.post('/:cnvId/Msgs', function(req, res){
          cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
    },
    function(cnvs, fields, cb) {
-      if (vld.check(cnvs.length, Tags.notFound, null, cb))
-         cnn.chkQry('Insert into Message set ?',
-          {cnvId: cnvId, prsId: req.session.id,
-          whenMade: now = new Date(), content: req.body.content}, cb);
+      if (vld.check(cnvs.length, Tags.notFound, null, cb)){
+            cnn.chkQry('Insert into Message set ?',
+             {cnvId: cnvId, prsId: req.session.id,
+             whenMade: now = new Date(), content: req.body.content}, cb);
+      }
    },
    function(insRes, fields, cb) {
       //console.log("\n" + Object.keys(insRes) + "\n" + insRes.insertId + "\n");
-      res.location(router.baseURL + '/' + insRes.insertId);
+      res.location('/Msgs/' + insRes.insertId);
       cnn.chkQry("update Conversation set lastMessage = ? where id = ?", [now, cnvId], cb);
    }],
    function(err) {

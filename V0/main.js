@@ -43,17 +43,15 @@ app.use(Session.router);
 // otherwise respond immediately with 401 and noLogin error tag.
 app.use(function(req, res, next) {
    console.log(req.path);
-   if (req.session || (req.method === 'POST' &&
-    (req.path === '/Prss' || req.path === '/Ssns'))) {
-      req.validator = new Validator(req, res);
-      next();
-   } else
-      res.status(401).end();
+   req.validator = new Validator(req, res);
+
+   req.validator.check(req.session || (req.method === 'POST' &&
+   (req.path === '/Prss' || req.path === '/Ssns'))
+   , Validator.Tags.noLogin, null, next());
 });
 
 // Add DB connection, with smart chkQry method, to |req|
 app.use(CnnPool.router);
-
 
 // Load all subroutes
 app.use('/Prss', require('./Routes/Account/Prss.js'));
@@ -141,7 +139,7 @@ app.delete('/DB', function(req, res) {
 // Handler of last resort.  Print a stacktrace to console and send a 500 response.
 app.use(function(req, res) {
    res.status(404).end();
-   res.cnn.release();
+   req.cnn.release();
 });
 
 app.use(function(err, req, res, next) {

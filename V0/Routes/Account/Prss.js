@@ -7,7 +7,6 @@ var router = Express.Router({caseSensitive: true});
 
 router.baseURL = '/Prss';
 
-
 /* Much nicer versions
 */
 router.get('/', function(req, res) {
