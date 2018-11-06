@@ -10,15 +10,23 @@ router.get('/', function(req, res) {
       if(!req.query.owner){
          req.cnn.chkQry('select * from Conversation', null,
          function(err, cnvs) {
-            if (!err)
+            if (!err){
+               for (var x in cnvs){
+                  if (cnvs[x].lastMessage) cnvs[x].lastMessage = cnvs[x].lastMessage.getTime();
+               }
                res.json(cnvs).end();
+            }
          });
       }
       else {
          req.cnn.chkQry('select * from Conversation where ownerId = ?', req.query.owner,
          function(err, cnvs) {
-            if (!err)
+            if (!err){
+               for (var x in cnvs){
+                  if (cnvs[x].lastMessage) cnvs[x].lastMessage = cnvs[x].lastMessage.getTime();
+               }
                res.json(cnvs).end();
+            }
          });
       }
    }
@@ -28,8 +36,10 @@ router.get('/', function(req, res) {
 router.get('/:id', function(req, res) {
    req.cnn.chkQry('select * from Conversation where id = ?', req.params.id,
    function(err, cnvs) {
-      if (!err && req.validator.check(cnvs.length, Tags.notFound, null, null))
+      if (!err && req.validator.check(cnvs.length, Tags.notFound, null, null)){
+         if (cnvs[0].lastMessage) cnvs[0].lastMessage = cnvs[0].lastMessage.getTime();
          res.json(cnvs[0]);
+      }
       req.cnn.release();
    });
 });
@@ -120,10 +130,10 @@ router.get('/:cnvId/Msgs', function(req, res) {
    
    if (req.query.dateTime) {
       query += ' and whenMade <= ?';
-      params.push(req.query.dateTime);
+      params.push(new Date(parseInt(req.query.dateTime)));
    }
 
-   query += ' join Person p on prsId = p.id where c.id = ? order by whenMade desc';
+   query += ' join Person p on prsId = p.id where c.id = ? order by whenMade';
    params.push(cnvId);
 
    if (req.query.num) {
@@ -138,7 +148,7 @@ router.get('/:cnvId/Msgs', function(req, res) {
       cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
    },
    function(cnvs, fields, cb) { // Get indicated messages
-     // console.log("\nQUERY:\t" + query + "\n");
+      console.log("\nQUERY:\t" + query + "\n");
      // console.log("\nPARAMS:\t" + params + "\n");
       console.log("\nCNVS-LENGTH:\t" + cnvs.length + "\n");
       if (vld.check(cnvs.length, Tags.notFound, null, cb)){
@@ -184,6 +194,7 @@ router.post('/:cnvId/Msgs', function(req, res){
             cnn.chkQry('Insert into Message set ?',
              {cnvId: cnvId, prsId: req.session.id,
              whenMade: now = new Date(), content: req.body.content}, cb);
+            console.log("\n\t\t\tMSG time = " + now.getTime() + "\n");
       }
    },
    function(insRes, fields, cb) {
