@@ -42,8 +42,10 @@ Validator.prototype.check = function(test, tag, params, cb) {
 
    if (this.errors.length) {
       if (this.res) {
-        console.log("\n" + this.errors[0].tag + "\n");
-         if (this.errors[0].tag === Validator.Tags.noPermission)
+         console.log("\n" + this.errors[0].tag + "\n");
+         if (this.errors[0].tag === Validator.Tags.noLogin)
+            this.res.status(401).end();
+         else if (this.errors[0].tag === Validator.Tags.noPermission)
             this.res.status(403).end();
          else
             this.res.status(400).json(this.errors);

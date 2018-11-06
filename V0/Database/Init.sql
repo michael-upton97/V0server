@@ -18,7 +18,7 @@
     id int auto_increment primary key,
     ownerId int,
     title varchar(80) not null,
-    lastMessage datetime,
+    lastMessage datetime(3),
     constraint FKMessage_ownerId foreign key (ownerId) references Person(id)
         on delete cascade,
     unique key UK_title(title)
@@ -28,7 +28,7 @@
     id int auto_increment primary key,
     cnvId int not null,
     prsId int not null,
-    whenMade datetime not null,
+    whenMade datetime(3) not null,
     content varchar(5000) not null,
     constraint FKMessage_cnvId foreign key (cnvId) references Conversation(id)
         on delete cascade,

@@ -14,6 +14,7 @@ router.get('/', function(req, res) {
          body.push({cookie: cookie, prsId: ssn.id, loginTime: ssn.loginTime});
       }
       res.status(200).json(body);
+      cnn.release();
    }
 });
 
