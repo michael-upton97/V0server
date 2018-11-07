@@ -6,8 +6,8 @@ var async = require('async');
 router.baseURL = '/Cnvs';
 
 router.get('/', function(req, res) {
-   if(req.validator.check(true, null, null, null)){
-      if(!req.query.owner){
+   if (req.validator.check(true, null, null, null)){
+      if (!req.query.owner){
          req.cnn.chkQry('select * from Conversation', null,
          function(err, cnvs) {
             if (!err){
@@ -51,7 +51,7 @@ router.post('/', function(req, res) {
 
    async.waterfall([
    function(cb) {
-      if(vld.check(body.title, Tags.missingField, ["title"], cb))
+      if (vld.check(body.title, Tags.missingField, ["title"], cb))
          cnn.chkQry('select * from Conversation where title = ?', body.title, cb);
    },
    function(existingCnv, fields, cb) {
@@ -158,12 +158,12 @@ router.get('/:cnvId/Msgs', function(req, res) {
    },
    function(msgs, fields, cb) { // Return retrieved messages
       console.log("\nMSG:\t" + msgs + "\n");
-      if(msgs)
+      if (msgs)
          for (var x in msgs){
             console.log(msgs[0].whenMade); 
             msgs[x].whenMade = msgs[x].whenMade.getTime();
          }
-      if(limit){
+      if (limit){
          res.json(msgs.slice(0, limit)).end();
          cb();
       }
@@ -186,7 +186,7 @@ router.post('/:cnvId/Msgs', function(req, res){
 
    async.waterfall([
    function(cb) {
-      if(vld.check(req.body.content, Tags.missingField, "content", cb))
+      if (vld.check(req.body.content, Tags.missingField, "content", cb))
          cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
    },
    function(cnvs, fields, cb) {

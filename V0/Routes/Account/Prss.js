@@ -46,11 +46,11 @@ router.put('/:id', function(req, res) {
          }
       },
       function(result, fields, cb) {
-         if(vld.check(result.length, Tags.notFound, null, cb) && 
+         if (vld.check(result.length, Tags.notFound, null, cb) && 
          (admin || !("password" in body) || vld.check(result[0].password === body.oldPassword, Tags.oldPwdMismatch, null, cb)))
          {
             delete body.oldPassword;
-            if(Object.keys(body).length){
+            if (Object.keys(body).length){
                console.log("\nstep 2\n");
                cnn.chkQry('update Person set ? where id = ?', [body, id], cb);
             }
